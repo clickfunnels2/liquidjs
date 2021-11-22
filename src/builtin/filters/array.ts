@@ -1,4 +1,4 @@
-import { isArray, isNil, last as arrayLast, stringify } from '../../util/underscore'
+import { isArray, isNil, last as arrayLast } from '../../util/underscore'
 import { toArray } from '../../util/collection'
 import { isTruthy } from '../../render/boolean'
 import { FilterImpl } from '../../template/filter/filter-impl'
@@ -19,7 +19,7 @@ export function sort<T> (this: FilterImpl, arr: T[], property?: string) {
 }
 
 type OperationType = 'global' | 'scoped'
-function calculate (originalString: string, cb: (value: string, operationType: OperationType) => string): string {
+function getFromExpression (originalString: string, cb: (value: string, operationType: OperationType) => string, expectedClose?: string, iter = 0): string {
   const operationMapping: Record<OperationType, { open: string; close: string }> = {
     global: {
       open: '{',
@@ -31,32 +31,26 @@ function calculate (originalString: string, cb: (value: string, operationType: O
     }
   }
   const openTerms = Object.values(operationMapping).map(v => v.open)
-  const closeTerms = Object.values(operationMapping).map(v => v.close)
-  let res = ''
-  for (let i = 0; i < originalString.length; i++) {
+  let i = iter
+  let strLength = originalString.length
+  while (i < strLength) {
     const term = originalString[i]
     if (openTerms.includes(term)) {
-      for (let j = originalString.length - 1; j > i; j--) {
-        const termBack = originalString[j]
-        if (closeTerms.includes(termBack)) {
-          const operation = Object.entries(operationMapping).find(([k, v]) => v.close === termBack)
-          if (operation) {
-            const length = j - i - 1
-            const substr = originalString.substr(i + 1, length)
-            const resCalc = calculate(substr, cb)
-            const resCb = cb(resCalc, operation[0] as OperationType)
-            i += length + 1
-            res += resCb
-            break
-          }
-        }
+      const operation = Object.entries(operationMapping).find(([k, v]) => v.open === term)
+      if (operation) {
+        originalString = getFromExpression(originalString, cb, operation[1].close, i + 1)
+        strLength = originalString.length
       }
-    } else {
-      res += term
+    } else if (term === expectedClose) {
+      const operationType = (Object.entries(operationMapping).find(([, v]) => v.close === term) || [])[0]
+      const substr = originalString.substr(iter, i - iter)
+      const resCb = cb(substr, operationType as OperationType)
+      const resolvedString = originalString.substr(0, iter - 1) + resCb + originalString.substr(i + 1)
+      return resolvedString
     }
+    i++
   }
-  // console.log('res', res)
-  return res
+  return originalString
 }
 
 export const size = (v: string | any[]) => (v && v.length) || 0
@@ -80,38 +74,18 @@ export function slice<T> (v: T[], begin: number, length = 1): T[] {
 
 export function where<T extends object> (this: FilterImpl, arr: T[], property: string, expected?: any): T[] {
   return toArray(arr).filter(obj => {
-    if (property.startsWith('!')) {
+    if (/[{}()]/.test(property)) {
       const envVar = this.context.environments
-      console.log(property)
-      const value = calculate(property, (term, operation) => {
+      const value = getFromExpression(property, (term, operation) => {
         switch (operation) {
           case 'global': {
-            console.log('global:', term)
             return String(this.context.getFromScope(envVar, String(term).split('.')))
           }
           case 'scoped': {
-            console.log('scoped:', term)
             return String(this.context.getFromScope(obj, String(term).split('.')))
           }
         }
       })
-      // property = property.split('%')[1] as string
-      // const propertyFromObj = (property.match(/\$([^$]+)\$/) || ['', ''])[1]
-      // const valueObj = String(this.context.getFromScope(obj, String(propertyFromObj).split('.')))
-      // const processedProperty = property.replace(`$${propertyFromObj}$`, valueObj)
-
-      // const envVar = this.context.environments
-      // const value = this.context.getFromScope(envVar, String(processedProperty).split('.'))
-
-      // console.log('****************************')
-      // console.log('property', property)
-      // console.log('propertyFromObj', propertyFromObj)
-      // console.log('valueObj', valueObj)
-      // console.log('processedProperty', processedProperty)
-      // console.log('obj', obj)
-      // console.log('envVar', envVar)
-      // console.log('value', value)
-      // console.log('****************************')
       return expected === undefined ? isTruthy(value, this.context) : value === expected
     } else {
       const value = this.context.getFromScope(obj, String(property).split('.'))
