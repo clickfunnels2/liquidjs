@@ -15,6 +15,7 @@
     "check": "npm run build && npm test && npm run lint",
     "test": "nyc mocha \"test/**/*.ts\"",
     "test:array": "nyc mocha \"test/integration/builtin/filters/array.ts\"",
+    "test:async": "nyc mocha \"test/unit/context/context.ts\"",
     "test:e2e": "mocha \"test/e2e/**/*.ts\"",
     "perf": "cd benchmark && npm ci && npm start",
     "perf:diff": "bin/perf-diff.sh",

@@ -161,7 +161,7 @@ describe('filters/array', function () {
     //   { title: 'Limited edition sneakers', available: false },
     //   { title: 'Boring sneakers', available: true }
     // ]
-    it('should support filter by property value', function () {
+    it('should support using hash key as variable', function () {
       const scope = {
         courses: [
           {
@@ -179,8 +179,7 @@ describe('filters/array', function () {
           }
         }
       }
-
-      return test('{% for course in courses %}{{contact.enrolled_courses.[course.id].enrollment_url}}{% endfor %}',
+      return test('{% for course in courses %}{{contact.enrolled_courses[course.id].enrollment_url}}{% endfor %}',
         scope, 'podcast://url.com')
     })
     // it('should support filter by property value', function () {

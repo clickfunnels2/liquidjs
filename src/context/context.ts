@@ -3,9 +3,11 @@ import { __assign } from 'tslib'
 import { NormalizedFullOptions, defaultOptions } from '../liquid-options'
 import { Scope } from './scope'
 import { isArray, isNil, isString, isFunction, toLiquid } from '../util/underscore'
+import { toThenable } from '../util/async'
+
 import { InternalUndefinedVariableError } from '../util/error'
 
-export type BackfillScopeCb = (variable: string, env: Scope) => Promise<any>
+export type BackfillScopeCb = (variable: string, env: Scope) => void
 
 export class Context {
   /**
@@ -51,10 +53,10 @@ export class Context {
     return [this.globals, this.environments, ...this.scopes]
       .reduce((ctx, val) => __assign(ctx, val), {})
   }
-  public async get (paths: string[]) {
+  public get (paths: string[]) {
     if (this.backfillScopeCb) {
       if (!(paths[0] in this.environments)) {
-        await this.backfillScopeCb(paths[0], this.environments)
+        const res = this.backfillScopeCb(paths[0], this.environments)
       }
     }
 
