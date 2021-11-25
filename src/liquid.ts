@@ -1,4 +1,4 @@
-import { Context, BackfillScopeCb } from './context/context'
+import { Context } from './context/context'
 import { forOwn, snakeCase } from './util/underscore'
 import { Template } from './template/template'
 import { LookupType } from './fs/loader'
@@ -17,7 +17,6 @@ import { toPromise, toValue } from './util/async'
 export * from './util/error'
 export * from './types'
 export const version = '[VI]{version}[/VI]'
-export { BackfillScopeCb } from './context/context'
 
 export class Liquid {
   public readonly options: NormalizedFullOptions
@@ -25,17 +24,13 @@ export class Liquid {
   public readonly parser: Parser
   public readonly filters: FilterMap
   public readonly tags: TagMap
-  private ctx?: Context
-  private backfillScopeCb?: BackfillScopeCb
 
-
-  public constructor (opts: LiquidOptions = {}, backfillScopeCb?: BackfillScopeCb) {
+  public constructor (opts: LiquidOptions = {}) {
     this.options = normalize(opts)
     this.parser = new Parser(this)
     this.renderer = new Render()
     this.filters = new FilterMap(this.options.strictFilters, this)
     this.tags = new TagMap()
-    this.backfillScopeCb = backfillScopeCb
 
     forOwn(builtinTags, (conf: TagImplOptions, name: string) => this.registerTag(snakeCase(name), conf))
     forOwn(builtinFilters, (handler: FilterImplOptions, name: string) => this.registerFilter(snakeCase(name), handler))
@@ -45,8 +40,8 @@ export class Liquid {
   }
 
   public _render (tpl: Template[], scope?: object, sync?: boolean): IterableIterator<any> {
-    this.ctx = this.ctx || new Context(scope, this.options, sync, this.backfillScopeCb)
-    return this.renderer.renderTemplates(tpl, this.ctx)
+    const ctx = new Context(scope, this.options, sync)
+    return this.renderer.renderTemplates(tpl, ctx)
   }
   public async render (tpl: Template[], scope?: object): Promise<any> {
     return toPromise(this._render(tpl, scope, false))

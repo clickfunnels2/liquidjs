@@ -3,11 +3,7 @@ import { __assign } from 'tslib'
 import { NormalizedFullOptions, defaultOptions } from '../liquid-options'
 import { Scope } from './scope'
 import { isArray, isNil, isString, isFunction, toLiquid } from '../util/underscore'
-import { toThenable } from '../util/async'
-
 import { InternalUndefinedVariableError } from '../util/error'
-
-export type BackfillScopeCb = (variable: string, env: Scope) => void
 
 export class Context {
   /**
@@ -28,14 +24,11 @@ export class Context {
   public globals: Scope
   public sync: boolean
   public opts: NormalizedFullOptions
-  public backfillScopeCb?: BackfillScopeCb
-
-  public constructor (env: object = {}, opts: NormalizedFullOptions = defaultOptions, sync = false, backfillScopeCb?: BackfillScopeCb) {
+  public constructor (env: object = {}, opts: NormalizedFullOptions = defaultOptions, sync = false) {
     this.sync = sync
     this.opts = opts
     this.globals = opts.globals
     this.environments = env
-    this.backfillScopeCb = backfillScopeCb
   }
   public getRegister (key: string) {
     return (this.registers[key] = this.registers[key] || {})
@@ -54,19 +47,13 @@ export class Context {
       .reduce((ctx, val) => __assign(ctx, val), {})
   }
   public get (paths: string[]) {
-    if (this.backfillScopeCb) {
-      if (!(paths[0] in this.environments)) {
-        const res = this.backfillScopeCb(paths[0], this.environments)
-      }
-    }
-
     const scope = this.findScope(paths[0])
     return this.getFromScope(scope, paths)
   }
   public getFromScope (scope: object, paths: string[] | string) {
     if (typeof paths === 'string') paths = paths.split('.')
     return paths.reduce((scope, path) => {
-      scope = readProperty(scope, path)
+      scope = readProperty(scope, path, this.opts.defaultDrop)
       if (isNil(scope) && this.opts.strictVariables) {
         throw new InternalUndefinedVariableError(path)
       }
@@ -92,7 +79,7 @@ export class Context {
   }
 }
 
-export function readProperty (obj: Scope, key: string) {
+export function readProperty (obj: Scope, key: string, defaultDrop?: Drop) {
   if (isNil(obj)) return obj
   obj = toLiquid(obj)
   if (isFunction(obj[key])) return obj[key]()
@@ -103,6 +90,11 @@ export function readProperty (obj: Scope, key: string) {
   if (key === 'size') return readSize(obj)
   if (key === 'first') return readFirst(obj)
   if (key === 'last') return readLast(obj)
+  if (!obj[key] && defaultDrop) {
+    const value = defaultDrop.liquidMethodMissing(key)
+    if (value) obj[key] = value
+    return value
+  }
   return obj[key]
 }
 
