@@ -3,6 +3,7 @@ import { toArray } from '../../util/collection'
 import { isTruthy } from '../../render/boolean'
 import { FilterImpl } from '../../template/filter/filter-impl'
 import { Scope } from '../../context/scope'
+import { NullDrop } from '../../drop/null-drop'
 
 export const join = (v: any[], arg: string) => v.join(arg === undefined ? ' ' : arg)
 export const last = (v: any) => isArray(v) ? arrayLast(v) : ''
@@ -22,8 +23,8 @@ type OperationType = 'global' | 'scoped'
 function getFromExpression (originalString: string, cb: (value: string, operationType: OperationType) => string, expectedClose?: string, iter = 0): string {
   const operationMapping: Record<OperationType, { open: string; close: string }> = {
     global: {
-      open: '{',
-      close: '}'
+      open: '<',
+      close: '>'
     },
     scoped: {
       open: '(',
@@ -76,16 +77,20 @@ export function where<T extends object> (this: FilterImpl, arr: T[], property: s
   return toArray(arr).filter(obj => {
     if (/[{}()]/.test(property)) {
       const envVar = this.context.environments
-      const value = getFromExpression(property, (term, operation) => {
+      const tmpVal = getFromExpression(property, (term, operation) => {
         switch (operation) {
           case 'global': {
-            return String(this.context.getFromScope(envVar, String(term).split('.')))
+            const res = this.context.getFromScope(envVar, String(term).split('.'))
+            return res ? String(res) : ''
           }
           case 'scoped': {
-            return String(this.context.getFromScope(obj, String(term).split('.')))
+            const res = this.context.getFromScope(obj, String(term).split('.'))
+            return res ? String(res) : ''
           }
         }
       })
+      const value = tmpVal.length ? tmpVal : null
+      if (expected instanceof NullDrop && value == null) return true
       return expected === undefined ? isTruthy(value, this.context) : value === expected
     } else {
       const value = this.context.getFromScope(obj, String(property).split('.'))
