@@ -3,6 +3,7 @@ export { TypeGuards }
 export { ParseError, TokenizationError, AssertionError } from './util/error'
 export { assert } from './util/assert'
 export { Drop } from './drop/drop'
+export { FallbackDrop } from './drop/fallback-drop'
 export { Emitter } from './emitters/emitter'
 export { Expression } from './render/expression'
 export { isFalsy, isTruthy } from './render/boolean'

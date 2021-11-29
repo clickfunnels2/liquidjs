@@ -1,4 +1,5 @@
 import { Drop } from '../drop/drop'
+import { FallbackDrop } from '../drop/fallback-drop'
 import { __assign } from 'tslib'
 import { NormalizedFullOptions, defaultOptions } from '../liquid-options'
 import { Scope } from './scope'
@@ -52,13 +53,17 @@ export class Context {
   }
   public getFromScope (scope: object, paths: string[] | string) {
     if (typeof paths === 'string') paths = paths.split('.')
-    return paths.reduce((scope, path) => {
-      scope = readProperty(scope, path, this.opts.defaultDrop)
+    paths.every((path, index) => {
+      scope = readProperty(scope, path, this.opts.fallbackDrop, paths as string[], index, this)
+      if (scope instanceof Promise) {
+        return false
+      }
       if (isNil(scope) && this.opts.strictVariables) {
         throw new InternalUndefinedVariableError(path)
       }
-      return scope
-    }, scope)
+      return true
+    })
+    return scope
   }
   public push (ctx: object) {
     return this.scopes.push(ctx)
@@ -79,7 +84,7 @@ export class Context {
   }
 }
 
-export function readProperty (obj: Scope, key: string, defaultDrop?: Drop) {
+export function readProperty (obj: Scope, key: string, fallbackDrop?: FallbackDrop, paths?: string[], index?: number, context?: Context) {
   if (isNil(obj)) return obj
   obj = toLiquid(obj)
   if (isFunction(obj[key])) return obj[key]()
@@ -90,10 +95,8 @@ export function readProperty (obj: Scope, key: string, defaultDrop?: Drop) {
   if (key === 'size') return readSize(obj)
   if (key === 'first') return readFirst(obj)
   if (key === 'last') return readLast(obj)
-  if (!obj[key] && defaultDrop) {
-    const value = defaultDrop.liquidMethodMissing(key)
-    if (value) obj[key] = value
-    return value
+  if (!obj[key] && fallbackDrop) {
+    return fallbackDrop.liquidMethodMissing(key, paths, obj, index, context)
   }
   return obj[key]
 }
