@@ -75,7 +75,7 @@ export function slice<T> (v: T[], begin: number, length = 1): T[] {
 
 export function where<T extends object> (this: FilterImpl, arr: T[], property: string, expected?: any): T[] {
   return toArray(arr).filter(obj => {
-    if (/[{}()]/.test(property)) {
+    if (/[<>()]/.test(property)) {
       const envVar = this.context.environments
       const tmpVal = getFromExpression(property, (term, operation) => {
         switch (operation) {

@@ -161,27 +161,6 @@ describe('filters/array', function () {
       { title: 'Limited edition sneakers', available: false },
       { title: 'Boring sneakers', available: true }
     ]
-    it('should support using hash key as variable', function () {
-      const scope = {
-        courses: [
-          {
-            id: '8',
-            title: 'Test Course',
-            url: '/courses/test-course'
-          }
-        ],
-        'contact': {
-          'enrolled_courses': {
-            '8': {
-              'id': '8',
-              'enrollment_url': 'podcast://url.com'
-            }
-          }
-        }
-      }
-      return test('{% for course in courses %}{{contact.enrolled_courses[course.id].enrollment_url}}{% endfor %}',
-        scope, 'podcast://url.com')
-    })
     it('should support filter by property value', function () {
       return test(`{% assign kitchen_products = products | where: "type", "kitchen" %}
         Kitchen products:
@@ -227,6 +206,27 @@ describe('filters/array', function () {
       const scope = { obj: { foo: 'FOO' } }
       await test('{{obj | where: "foo", "FOO" }}', scope, '[object Object]')
       await test('{{obj | where: "foo", "BAR" }}', scope, '')
+    })
+    it('should support using hash key as variable', function () {
+      const scope = {
+        courses: [
+          {
+            id: '8',
+            title: 'Test Course',
+            url: '/courses/test-course'
+          }
+        ],
+        'contact': {
+          'enrolled_courses': {
+            '8': {
+              'id': '8',
+              'enrollment_url': 'podcast://url.com'
+            }
+          }
+        }
+      }
+      return test('{% for course in courses %}{{contact.enrolled_courses[course.id].enrollment_url}}{% endfor %}',
+        scope, 'podcast://url.com')
     })
     it('should support filter by truthy', function () {
       const localStuff = {
