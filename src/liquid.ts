@@ -24,6 +24,7 @@ export class Liquid {
   public readonly parser: Parser
   public readonly filters: FilterMap
   public readonly tags: TagMap
+  public ctx?: Context
 
   public constructor (opts: LiquidOptions = {}) {
     this.options = normalize(opts)
@@ -40,7 +41,13 @@ export class Liquid {
   }
 
   public _render (tpl: Template[], scope?: object, sync?: boolean): IterableIterator<any> {
-    const ctx = new Context(scope, this.options, sync)
+    let ctx
+    if (this.options.persistContext) {
+      ctx = this.ctx || new Context(scope, this.options, sync)
+      this.ctx = ctx
+    } else {
+      ctx = new Context(scope, this.options)
+    }
     return this.renderer.renderTemplates(tpl, ctx)
   }
   public async render (tpl: Template[], scope?: object): Promise<any> {

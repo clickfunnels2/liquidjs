@@ -1,6 +1,6 @@
 {
-  "name": "liquidjs",
-  "version": "9.28.5",
+  "name": "@clickfunnels2/liquidjs",
+  "version": "9.28.51",
   "description": "A simple, expressive and safe Shopify / Github Pages compatible template engine in pure JavaScript.",
   "main": "dist/liquid.node.cjs.js",
   "module": "dist/liquid.node.esm.js",
@@ -26,9 +26,12 @@
     "liquidjs": "./bin/liquid.js",
     "liquid": "./bin/liquid.js"
   },
+  "publishConfig": {
+    "registry":"https://npm.pkg.github.com"
+  },
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/harttle/liquidjs.git"
+    "url": "git://github.com/clickfunnels2/liquidjs"
   },
   "funding": {
     "type": "opencollective",

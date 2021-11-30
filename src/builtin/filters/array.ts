@@ -3,6 +3,7 @@ import { toArray } from '../../util/collection'
 import { isTruthy } from '../../render/boolean'
 import { FilterImpl } from '../../template/filter/filter-impl'
 import { Scope } from '../../context/scope'
+import { NullDrop } from '../../drop/null-drop'
 
 export const join = (v: any[], arg: string) => v.join(arg === undefined ? ' ' : arg)
 export const last = (v: any) => isArray(v) ? arrayLast(v) : ''
@@ -16,6 +17,41 @@ export function sort<T> (this: FilterImpl, arr: T[], property?: string) {
     rhs = getValue(rhs)
     return lhs < rhs ? -1 : (lhs > rhs ? 1 : 0)
   })
+}
+
+type OperationType = 'global' | 'scoped'
+function getFromExpression (originalString: string, cb: (value: string, operationType: OperationType) => string, expectedClose?: string, iter = 0): string {
+  const operationMapping: Record<OperationType, { open: string; close: string }> = {
+    global: {
+      open: '<',
+      close: '>'
+    },
+    scoped: {
+      open: '(',
+      close: ')'
+    }
+  }
+  const openTerms = Object.values(operationMapping).map(v => v.open)
+  let i = iter
+  let strLength = originalString.length
+  while (i < strLength) {
+    const term = originalString[i]
+    if (openTerms.includes(term)) {
+      const operation = Object.entries(operationMapping).find(([k, v]) => v.open === term)
+      if (operation) {
+        originalString = getFromExpression(originalString, cb, operation[1].close, i + 1)
+        strLength = originalString.length
+      }
+    } else if (term === expectedClose) {
+      const operationType = (Object.entries(operationMapping).find(([, v]) => v.close === term) || [])[0]
+      const substr = originalString.substr(iter, i - iter)
+      const resCb = cb(substr, operationType as OperationType)
+      const resolvedString = originalString.substr(0, iter - 1) + resCb + originalString.substr(i + 1)
+      return resolvedString
+    }
+    i++
+  }
+  return originalString
 }
 
 export const size = (v: string | any[]) => (v && v.length) || 0
@@ -39,8 +75,27 @@ export function slice<T> (v: T[], begin: number, length = 1): T[] {
 
 export function where<T extends object> (this: FilterImpl, arr: T[], property: string, expected?: any): T[] {
   return toArray(arr).filter(obj => {
-    const value = this.context.getFromScope(obj, String(property).split('.'))
-    return expected === undefined ? isTruthy(value, this.context) : value === expected
+    if (/[<>()]/.test(property)) {
+      const envVar = this.context.environments
+      const tmpVal = getFromExpression(property, (term, operation) => {
+        switch (operation) {
+          case 'global': {
+            const res = this.context.getFromScope(envVar, String(term).split('.'))
+            return res ? String(res) : ''
+          }
+          case 'scoped': {
+            const res = this.context.getFromScope(obj, String(term).split('.'))
+            return res ? String(res) : ''
+          }
+        }
+      })
+      const value = tmpVal.length ? tmpVal : null
+      if (expected instanceof NullDrop && value == null) return true
+      return expected === undefined ? isTruthy(value, this.context) : value === expected
+    } else {
+      const value = this.context.getFromScope(obj, String(property).split('.'))
+      return expected === undefined ? isTruthy(value, this.context) : value === expected
+    }
   })
 }
 

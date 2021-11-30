@@ -207,5 +207,103 @@ describe('filters/array', function () {
       await test('{{obj | where: "foo", "FOO" }}', scope, '[object Object]')
       await test('{{obj | where: "foo", "BAR" }}', scope, '')
     })
+    it('should support using hash key as variable', function () {
+      const scope = {
+        courses: [
+          {
+            id: '8',
+            title: 'Test Course',
+            url: '/courses/test-course'
+          }
+        ],
+        'contact': {
+          'enrolled_courses': {
+            '8': {
+              'id': '8',
+              'enrollment_url': 'podcast://url.com'
+            }
+          }
+        }
+      }
+      return test('{% for course in courses %}{{contact.enrolled_courses[course.id].enrollment_url}}{% endfor %}',
+        scope, 'podcast://url.com')
+    })
+    it('should support filter by truthy', function () {
+      const localStuff = {
+        globalStuff: { a: { enabled: true } },
+        list: [ { title: 'a', prop: 1 }, { title: 'b', prop: 2 } ]
+      }
+
+      return test(`{% assign procList = list | where: "<globalStuff.(title).enabled>" %}
+        {% for rec in procList -%}
+        - {{ rec.title }}
+        {% endfor %}`, localStuff, `
+        - a
+        `)
+    })
+    it('should support filter by falsy', function () {
+      const localStuff = {
+        globalStuff: { a: { enabled: true } },
+        list: [ { title: 'a', prop: 1 }, { title: 'b', prop: 2 } ]
+      }
+
+      return test(`{% assign procList = list | where: "<globalStuff.(title).enabled>", null %}
+        {% for rec in procList -%}
+        - {{ rec.title }}
+        {% endfor %}`, localStuff, `
+        - b
+        `)
+    })
+    it('should support whole context in where clause multiple and nested operators', function () {
+      const scope = {
+        fullList: [
+          { id: 'a', word: { char: 'x' } },
+          { id: 'b', word: { char: 'z' } }
+        ],
+        globalStuff: {
+          a: {
+            id: '1',
+            param: 'char',
+            char: 't'
+          },
+          b: {
+            id: '2',
+            param: 'char',
+            char: 'y'
+          }
+        }
+      }
+      return test(`{% assign procList = fullList | where: "<globalStuff.(id).<globalStuff.(id).param>>", "t" %}
+      ListRes:
+      {% for record in procList -%}
+      - {{ record.id }}
+      {% endfor %}`, scope, `
+      ListRes:
+      - a
+      `)
+    })
+    it('should support whole context in where clause', function () {
+      const scope = {
+        courses: [
+          { id: '1', title: 'Test1' },
+          { id: '2', title: 'Test2' }
+        ],
+        contact: {
+          enrolledCourses: {
+            '1': {
+              id: '1'
+            }
+          }
+        }
+      }
+      return test(`{% assign enrolled_courses = courses | where: "<contact.enrolledCourses.(id).id>", "1" %}
+        Enrolled courses:
+        {% for course in enrolled_courses -%}
+        - {{ course.title }}
+        {% endfor %}`, scope, `
+        Enrolled courses:
+        - Test1
+        `)
+    })
   })
 })

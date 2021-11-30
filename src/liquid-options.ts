@@ -7,6 +7,8 @@ import * as fs from './fs/node'
 import { defaultOperators, Operators } from './render/operator'
 import { createTrie, Trie } from './util/operator-trie'
 import { Thenable } from './util/async'
+import { Drop } from './drop/drop'
+import { FallbackDrop } from './drop/fallback-drop'
 
 export interface LiquidOptions {
   /** A directory or an array of directories from where to resolve layout and include templates, and the filename passed to `.renderFile()`. If it's an array, the files are looked up in the order they occur in the array. Defaults to `["."]` */
@@ -63,6 +65,10 @@ export interface LiquidOptions {
   operators?: Operators;
   /** Respect parameter order when using filters like "for ... reversed limit", Defaults to `false`. */
   orderedFilterParameters?: boolean;
+  /** Use a default drop to solve keys */
+  fallbackDrop?: FallbackDrop;
+  /** Persist Context across render calls */
+  persistContext?: boolean;
 }
 
 interface NormalizedOptions extends LiquidOptions {
@@ -100,6 +106,7 @@ export interface NormalizedFullOptions extends NormalizedOptions {
   keepOutputType: boolean;
   operators: Operators;
   operatorsTrie: Trie;
+  fallbackDrop?: Drop;
 }
 
 export const defaultOptions: NormalizedFullOptions = {
@@ -128,7 +135,8 @@ export const defaultOptions: NormalizedFullOptions = {
   globals: {},
   keepOutputType: false,
   operators: defaultOperators,
-  operatorsTrie: createTrie(defaultOperators)
+  operatorsTrie: createTrie(defaultOperators),
+  fallbackDrop: undefined
 }
 
 export function normalize (options: LiquidOptions): NormalizedFullOptions {
