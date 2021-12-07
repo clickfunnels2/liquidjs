@@ -19,7 +19,11 @@ class FallbackDropImpl extends FallbackDrop {
             if (key === 'courses') {
               value = await new Promise(resolve => setTimeout(
                 () => {
-                  resolve([{ title: 'Course 1', url: 'https://test.com/course-1' }, { title: 'Course 2', url: 'https://test.com/course-2' }])
+                  resolve([
+                    { title: 'Course 1', url: 'https://test.com/course-1', enrolled: false },
+                    { title: 'Course 2', url: 'https://test.com/course-2', enrolled: false },
+                    { title: 'Course 3', url: 'https://test.com/course-3', enrolled: true }
+                  ])
                 }, 0))
             }
             if (key === 'contact') {
@@ -51,7 +55,7 @@ describe('drop/fallback-drop', function () {
   })
 
   it('should support promise of array', async function () {
-    const src = `{% for course in courses %}{{contact.name}} - {{course.title}} - {{course.url}} -{{course.position}}|{% endfor %}`
+    const src = `{% assign courses = courses | where: 'enrolled', false %}{% for course in courses %}{{contact.name}} - {{course.title}} - {{course.url}} -{{course.position}}|{% endfor %}`
     const html = await liquid.parseAndRender(src, {})
     return expect(html).to.equal(`Bob - Course 1 - https://test.com/course-1 -|Bob - Course 2 - https://test.com/course-2 -|`)
   })
