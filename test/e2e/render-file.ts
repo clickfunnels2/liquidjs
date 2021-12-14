@@ -39,7 +39,7 @@ describe('#renderFile()', function () {
   it('should default root to cwd', async function () {
     engine = new Liquid()
     const html = await engine.renderFile('package.json')
-    return expect(html).to.contain('"name": "liquidjs"')
+    return expect(html).to.contain('"name": "@clickfunnels2/liquidjs"')
   })
   it('should render file with context', async function () {
     const html = await engine.renderFile(resolve(views, 'name.html'), { name: 'harttle' })

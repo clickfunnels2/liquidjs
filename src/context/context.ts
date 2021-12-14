@@ -95,7 +95,7 @@ export function readProperty (obj: Scope, key: string, fallbackDrop?: FallbackDr
   if (key === 'size') return readSize(obj)
   if (key === 'first') return readFirst(obj)
   if (key === 'last') return readLast(obj)
-  if (!(key in obj) && fallbackDrop) {
+  if (fallbackDrop && typeof obj === 'object' && !(key in obj)) {
     return fallbackDrop.liquidMethodMissing(key, paths, obj, index, context)
   }
   return obj[key]

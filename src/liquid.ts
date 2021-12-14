@@ -46,7 +46,7 @@ export class Liquid {
       ctx = this.ctx || new Context(scope, this.options, sync)
       this.ctx = ctx
     } else {
-      ctx = new Context(scope, this.options)
+      ctx = new Context(scope, this.options, sync)
     }
     return this.renderer.renderTemplates(tpl, ctx)
   }
